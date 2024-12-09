@@ -1,0 +1,158 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+
+#include <ArduinoJson.h>
+
+const char* ssid = "Nilesh";
+const char* password = "12345678";
+const char* serverUrl = "http://192.168.1.12:5000/";
+
+const int relayPin = D5; // GPIO pin connected to relay module
+
+const int moistureSensorPin = A0; // Analog input pin for moisture sensor
+
+const int moistureThreshold = 60; // Threshold value for moisture level
+
+unsigned long previousMillis = 0;
+const long interval = 2000;  // Interval in milliseconds (3 seconds)
+
+void setup() {
+  Serial.begin(9600);
+  delay(100);
+
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+
+  Serial.println("Connected to WiFi");
+
+  // Set relay pin as an output
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, LOW);
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+  bool isMotorOff=false;
+  // Check if the specified interval has passed
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+
+    // Read moisture value from sensor
+    float moistureValue = (100.00 - (analogRead(moistureSensorPin) / 1023.00) * 100.00);
+    Serial.println("Moisture Value : " + String(moistureValue));
+
+    // Make HTTP request to send moisture data
+    WiFiClient client;
+    HTTPClient http;
+    String moistureUrl;
+    moistureUrl.concat(serverUrl);
+    moistureUrl.concat("moisture");
+    http.begin(client, moistureUrl);
+    http.addHeader("Content-Type", "application/json");
+
+    String jsonPayload = "{\"moisture\": " + String(moistureValue) + "}";
+    int httpCode = http.POST(jsonPayload);
+    if (httpCode == 200) {
+      Serial.println("Moisture data sent successfully");
+    } else {
+      Serial.println("Failed to send moisture data");
+    }
+
+    http.end();
+
+    // Check if moisture level is below the threshold
+
+    if (moistureValue > moistureThreshold && isMotorOff==true) {
+      Serial.println("Motor turned off");
+      digitalWrite(relayPin, LOW);
+      isMotorOff=true;
+       // Turn off the motor
+    } 
+    else {
+      isMotorOff=false;
+      // Serial.println("Turning on the motor");
+      // digitalWrite(relayPin, HIGH); // Turn on the motor
+    }
+    
+    // Make HTTP request to control motor
+    String motorUrl = String(serverUrl) + "motor";
+
+  http.begin(client, motorUrl);
+  int motorHttpCode = http.GET();
+  if (motorHttpCode == 200) {
+    String motorResponse = http.getString();
+    Serial.println("Motor status: " + motorResponse);
+    
+    // Parse JSON response
+    StaticJsonDocument<200> jsonDocument;
+    DeserializationError jsonError = deserializeJson(jsonDocument, motorResponse);
+    if (jsonError) {
+      Serial.println("Failed to parse motor status response");
+    } else {
+      const char* motorStatus = jsonDocument["status"];
+      
+      // Compare motor status
+      if (strcmp(motorStatus, "ON") == 0) {
+        // Motor is ON, do something
+        digitalWrite(relayPin, LOW);
+        
+         
+      } else if (strcmp(motorStatus, "OFF") == 0) {
+        // Motor is OFF, do something
+         digitalWrite(relayPin, HIGH);
+       
+      }
+    }
+  } else {
+    Serial.println("Failed to retrieve motor status");
+  }
+    http.end();
+  }
+}
+
+
+// void loop() {
+//   unsigned long currentMillis = millis();
+
+//   // Check if the specified interval has passed
+//   if (currentMillis - previousMillis >= interval) {
+//     previousMillis = currentMillis;
+
+//     // Read moisture value from sensor
+//     float moistureValue = (100.00 - (analogRead(moistureSensorPin) / 1023.00) * 100.00);
+//     Serial.println("Moisture Value : " + String(moistureValue));
+
+//     // Make HTTP request to send moisture data
+//     WiFiClient client;
+//     HTTPClient http;
+//     String moistureUrl;
+//     moistureUrl.concat(serverUrl);
+//     moistureUrl.concat("moisture");
+//     http.begin(client, moistureUrl);
+//     http.addHeader("Content-Type", "application/json");
+
+//     String jsonPayload = "{\"moisture\": " + String(moistureValue) + "}";
+//     int httpCode = http.POST(jsonPayload);
+//     if (httpCode == 200) {
+//       Serial.println("Moisture data sent successfully");
+
+//     } else {
+//       Serial.println("Failed to send moisture data");
+//     }
+
+//     http.end();
+
+//     // Check if moisture level is below the threshold
+//     if (moistureValue < moistureThreshold) {
+//       Serial.println("Motor turned off");
+//       digitalWrite(relayPin, LOW); // Turn off the motor
+//     } else {
+//       Serial.println("Turning on the motor");
+//       digitalWrite(relayPin, HIGH); // Turn on the motor
+//     }
+//   }
+// }

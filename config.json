@@ -1,0 +1,9 @@
+{
+    "params": {
+        "local_server": "True",
+        "local_url": "mysql://root:@localhost/iotbasedirrigation",
+        "prod_url": "mysql://root:@localhost/iotbasedirrigation"
+
+
+    }
+}

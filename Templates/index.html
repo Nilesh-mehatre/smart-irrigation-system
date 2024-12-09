@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static',filename='favicon.svg') }}" />
+
+    <title>Irrigator</title>
+
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com/"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .fu-progress {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            border: 5px solid rgb(23, 139, 202);
+            border-radius: 50% !important;
+        }
+        
+        .fu-inner {
+            position: absolute;
+            overflow: hidden;
+            z-index: 2;
+            width: 240px;
+            height: 240px;
+            border: 5px solid #ffffff;
+            border-radius: 50% !important;
+        }
+        
+        .water {
+            position: absolute;
+            z-index: 1;
+            background: rgba(23, 139, 202, 0.5);
+            opacity: 0.5;
+            width: 200%;
+            height: 200%;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            transition: all 1s ease !important;
+            -webkit-transition: all 1s ease !important;
+            top: 50%;
+            left: -50%;
+            border: 1px solid transparent;
+            border-radius: 40% !important;
+            animation-duration: 10s;
+            animation-name: spin;
+            animation-iteration-count: infinite;
+            animation-timing-function: linear;
+        }
+        
+        .glare {
+            position: absolute;
+            top: -120%;
+            left: -120%;
+            z-index: 5;
+            width: 200%;
+            height: 200%;
+            transform: rotate(45deg);
+            background: #ffffff;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+        }
+        
+        .fu-percent {
+            position: absolute;
+            top: 57px;
+            width: 100%;
+            height: 100%;
+            font-size: 6em;
+            font-weight: bold;
+            color: rgb(4, 86, 129);
+            text-align: center;
+        }
+    </style>
+    <style>
+        @keyframes ripple {
+            0% {
+                box-shadow: 0 0 0 0 rgba(128, 128, 128, 0.2);
+            }
+            100% {
+                box-shadow: 0 0 0 25px rgba(128, 128, 128, 0);
+            }
+        }
+        
+        .animate-ripple {
+            animation: ripple 1.5s linear infinite;
+        }
+        
+        @media (max-width: 640px) {
+            button.onoff {
+                font-size: 1rem;
+                padding: 3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="flex flex-col items-center justify-center h-full bg-gray-100">
+        <div class="w-full h-full  p-6 bg-gray-100 rounded-lg shadow-md overflow-hidden">
+            <div class="flex justify-between mb-6">
+                <div class="w-1/2">
+                    <h1 class="text-2xl font-bold">Irrigator</h1>
+                </div>
+                <div class="w-1/2 text-right">
+                    <span class="connection text-sm text-green-500 hidden"> Connected</span>
+                    <span class="connection text-sm text-red-500 hidden"> Disonnected</span>
+                    <span class="text-green-500 text-lg mdi mdi-checkbox-marked-circle-outline ml-2"></span>
+                </div>
+            </div>
+            <div class="flex justify-between relative items-start w-full">
+                <div class="flex   justify-center w-1/2 md:w-1/6 mb-8 md:mb-12">
+                    <div class="w-1/4 md:w-1/4">
+                        <div class="w-5 h-5 text-center  rounded-full bg-gray-300 overflow-hidden">
+                            <div id="phase1" class="w-full h-full rounded-full bg-orange-500 opacity-100"></div>
+                        </div>
+                        <div class="text-left mt-2 text-sm md:text-base">P1</div>
+                    </div>
+                    <div class="w-1/4 md:w-1/4">
+                        <div class="w-5 h-5  rounded-full bg-gray-300 overflow-hidden">
+
+                            <div id="phase2" class="w-full h-full rounded-full bg-blue-500 opacity-100"></div>
+
+                        </div>
+                        <div class="text-left mt-2 text-sm md:text-base">P2</div>
+                    </div>
+                    <div class="w-1/4 md:w-1/4">
+                        <div class="w-5 h-5  rounded-full bg-gray-300 overflow-hidden">
+                            <div id="phase3" class="w-full h-full rounded-full bg-yellow-500 opacity-100"></div>
+
+                        </div>
+                        <div class="text-left mt-2 text-sm md:text-base">P3</div>
+                    </div>
+                    <div class="w-1/4 ">
+                        <div class="w-5 h-5   rounded-full bg-gray-300 overflow-hidden">
+                            <div id="statusLed" class="w-full h-full rounded-full bg-green-500 opacity-100"></div>
+                        </div>
+                        <div class="text-left mt-2 text-sm md:text-base">Motor</div>
+                    </div>
+                    <div class="w-1/4 ">
+                        <label for="toggle" class="flex items-center cursor-pointer overflow-hidden">
+                            <div class="relative">
+                              <input id="toggle" onclick="toggleSwitch()" type="checkbox" class="hidden" />
+                              <div class="toggle__line w-10 h-5 bg-gray-400 rounded-full shadow-inner "></div>
+                              <div class="toggle__dot absolute w-5 h-5 bg-white rounded-full transform border-green-900 bg-gray-900 shadow inset-y-0 left-0 " id="switchBtn"></div>
+                            </div>
+                             </label>
+
+
+
+                        <div class="text-left mt-2 text-sm md:text-base">Remote</div>
+                    </div>
+                </div>
+                <div class="flex absolute scale-50 flex-col  justify-end top-[-50%] left-1/2  w-1/2 md:left-96 md:w-1/6 mb-8 md:mb-12">
+                    <div class="w-1/4 md:w-1/4 mb-2">
+                        <input type="text" name="custId" id="custId" value="{{user.userId}}" readonly class="hidden px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    </div>
+                    <div class="w-1/4 md:w-1/4 mb-2">
+                        <input type="tel" name="custMobile" id="custMobile" value="{{user.mobile}}" readonly class=" px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    </div>
+                    <div class="w-1/4 md:w-1/4 mb-2">
+                        <div class="relative">
+                            <input type="password" name="custPassword" id="custPassword" value="{{user.userId}}" readonly class=" px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                            <button type="button" onclick="togglePasswordVisibility()" class="absolute  inset-y-0 left-[300%] flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 justify-end text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm-3 3a1 1 0 100-2 1 1 0 000 2z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 15v.01M9 12a4 4 0 018 0v.01M5 12a9 9 0 0118 0v.01M7 12a7 7 0 0114 0v.01" />
+                              </svg>
+                            </button>
+                        </div>
+
+
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center mb-6 ">
+                <div class="w-full  p-6 ">
+                    <h1 class="text-2xl font-bold mb-6"> Display</h1>
+                    <div class="grid grid-cols-1 md:grid-cols-2  gap-6">
+
+                        <!-- <div class="bg-purple-500 h-32 md:h-48 lg:h-64 rounded-lg shadow-md flex items-center justify-center">
+                            <span class="text-white text-center text-sm md:text-2xl lg:text-3xl font-bold" id="Display1">
+                  
+                            </span>
+                        </div> -->
+                        <div class="bg-purple-500 h-32 md:h-48 lg:h-64 rounded-lg shadow-md flex items-center justify-center">
+                            <span class="text-white text-center text-sm md:text-2xl lg:text-3xl font-bold" id="Display1">
+        
+                            </span>
+                        </div>
+
+                        <div class="bg-pink-500 h-32 md:h-48 lg:h-64 rounded-lg shadow-md flex items-center justify-center">
+                            <span class="text-white text-lg md:text-2xl lg:text-3xl font-bold" id="Display2">
+    
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-center mb-6">
+
+                <div class="w-1/2 text-center ">
+                    <button value="on" id="isMotorOn" onclick="clickHandler(event)" class="onoff uppercase bg-green-600 text-gray-800 font-semibold py-6 px-6 rounded-full hover:bg-gray-200 focus:outline-none focus:shadow-outline-gray active:bg-gray-300 transition duration-700 ease-in-out animate-ripple">
+                          </button>
+                </div>
+
+
+            </div>
+
+            <div class="flex items-center justify-center mb-6">
+                <div class="w-full  text-center ">
+                    <div class="fu-progress mx-auto">
+                        <div class="fu-inner">
+                            <div class="fu-percent percent"><span>50</span>%</div>
+                            <div id="water" class="water"></div>
+                            <div class="glare"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Toast -->
+
+    <div class="fixed top-20 z-50 right-5">
+
+        <div id="toast-default" class=" hidden flex items-center p-4 w-full max-w-xs text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800" role="alert">
+            <div class="inline-flex flex-shrink-0 justify-center items-center w-8 h-8 text-blue-500 bg-blue-100 rounded-lg dark:bg-blue-800 dark:text-blue-200">
+                <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd"></path></svg>
+                <span class="sr-only">Fire icon</span>
+
+            </div>
+            <div class="ml-3 text-sm font-normal" id="msgContent"></div>
+            <button type="button" class="alert-del ml-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700"
+                data-bs-dismiss="#toast-default" data-dismiss-target="#toast-default" aria-label="Close">
+        <span class="sr-only">Close</span>
+        <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path></svg>
+        </button>
+        </div>
+
+    </div>
+    <!-- Toast -->
+
+</body>
+
+<script>
+    let phase1 = document.getElementById("phase1");
+    let phase2 = document.getElementById("phase2");
+    let phase3 = document.getElementById("phase3");
+    let statusLed = document.getElementById("statusLed");
+    let custId = document.getElementById("custId");
+    let custMobile = document.getElementById("custMobile");
+    let custPassword = document.getElementById("custPassword");
+    let Display1 = document.getElementById("Display1");
+    let Display2 = document.getElementById("Display2");
+    let motorOnOffBtn = document.getElementById("isMotorOn");
+    let connection = document.getElementsByClassName("connection");
+    let switchBtn = document.getElementById("switchBtn");
+    let moistureLevelElement = document.getElementById("moistureLevel");
+
+
+
+    const toggleSwitch = () => {
+        if (switchBtn.classList.contains("translate-x-5") == true) {
+            switchBtn.classList.remove("translate-x-5");
+            postUpdate("monitor", "isActive_remote", true)
+        } else {
+            switchBtn.classList.add("translate-x-5");
+            postUpdate("monitor", "isActive_remote", false)
+        }
+
+    }
+
+    getUpdate();
+    setInterval(function() {
+        getUpdate();
+    }, 5000);
+
+    async function getUpdate() {
+        try {
+            const response = await fetch(`/remote`);
+            const data = await response.json();
+            connection[0].classList.remove("hidden");
+            connection[1].classList.add("hidden");
+            Display1.innerHTML = `Moisture Level: <span id="moistureLevel">${(data["moisture"]).toFixed(2)} %</span>`;
+            Display2.innerText = data["message_display"];
+            waterLevelMapper((data["moisture"]).toFixed(2));
+
+        } catch (error) {
+            connection[0].classList.add("hidden");
+            connection[1].classList.remove("hidden");
+        }
+
+
+    }
+    async function postUpdate() {
+        const response1 = await fetch(`/remote`);
+        const data1 = await response1.json();
+
+        var motorStatus;
+        //const motorStatus = 'ON';
+        if (data1["motor_status"] == "ON") {
+            motorStatus = 'OFF';
+        } else {
+            motorStatus = 'ON';
+        }
+        //const motorStatus = 'ON';
+        /*if (data["motor_status"] == "ON") {
+            const motorStatus = 'OFF';
+        } else {
+            const motorStatus = 'ON';
+        }*/
+        const payload = {
+            motor_status: motorStatus
+        };
+
+        const response = await fetch('/remote', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        connection[0].classList.remove('hidden');
+        connection[1].classList.add('hidden');
+        Display1.innerHTML = `Moisture Level: <span id="moistureLevel">${(data["moisture"]).toFixed(2)} %</span>`;
+        Display2.innerText = data["message_display"];
+        waterLevelMapper((data["moisture"]).toFixed(2));
+
+
+
+    }
+
+
+    const clickHandler = () => {
+
+        postUpdate();
+    }
+
+    const msgDisplay = (msg) => {
+        document.getElementById("msgContent").innerText = msg;
+        document.getElementById("toast-default").classList.remove("hidden");
+    }
+
+
+
+
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById("custPassword");
+        const icon = document.querySelector('svg');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.remove('text-gray-500');
+            icon.classList.add('text-blue-500');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.remove('text-blue-500');
+            icon.classList.add('text-gray-500');
+        }
+    }
+</script>
+<script>
+    'use strict';
+
+    var animatePercentChange = function animatePercentChange(newPercent, elem) {
+        elem = elem || $('.fu-percent span');
+        const val = parseInt(elem.text(), 10);
+
+        if (val !== parseInt(newPercent, 10)) {
+            let diff = newPercent < val ? -1 : 1;
+            elem.text(val + diff);
+            setTimeout(animatePercentChange.bind(null, newPercent, elem), 50);
+        }
+    };
+
+    const waterLevelMapper = (level) => {
+        const amount = level;
+        const currentPercent = $('.fu-percent span').text();
+        const waterAnimSpeed = (Math.abs(currentPercent - amount) / 50) * 10;
+        const waterPercent = 100 - amount;
+        //console.log(waterPercent)
+        animatePercentChange(amount);
+
+        function getColor(value) {
+            //value from 0 to 100
+            var hue = ((value) * 1.20).toString(10);
+            return ["hsl(", hue, ",100%,50%)"].join("");
+        }
+
+
+        $('.water').css({
+            background: getColor(level),
+            top: waterPercent + '%'
+
+
+        });
+    }
+    let alert_del = document.querySelectorAll('.alert-del');
+    alert_del.forEach((x) =>
+        x.addEventListener('click', function() {
+            x.parentElement.classList.add('hidden');
+        })
+    );
+    setTimeout(() => {
+        alert_del.forEach((x) => x.parentElement.classList.add('hidden'));
+    }, 5000);
+</script>
+
+</html>
