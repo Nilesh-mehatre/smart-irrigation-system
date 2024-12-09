@@ -22,7 +22,7 @@ User Interface: Web/Mobile-based monitoring system (optional).
 Clone the repository:
 bash
 Copy code
-git clone https://github.com/your-username/smart-irrigation.git  
+git clone https://github.com/Nilesh-mehatre/smart-irrigation.git  
 Follow the setup instructions in the docs.
 Upload the source code to the microcontroller.
 Connect the hardware as per the circuit diagram.
