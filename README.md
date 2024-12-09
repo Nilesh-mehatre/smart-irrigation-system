@@ -1,7 +1,4 @@
 
-Memory updated
-Here's a suggested README file for your Smart Irrigation project:
-
 🌱 Smart Irrigation System
 Welcome to the Smart Irrigation System repository! This project automates and optimizes water usage for agricultural or gardening purposes, leveraging technology to conserve resources and ensure efficient irrigation.
 
